@@ -1,166 +1,195 @@
+import javax.swing.*;
+import javax.swing.border.LineBorder;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
 /**
- * SudokuSolver - Programme pour résoudre des grilles de Sudoku en utilisant une approche de backtracking.
+ * SudokuSolver - Programme pour résoudre des grilles de Sudoku avec une interface graphique.
  *
- * Ce solveur prend une grille de Sudoku incomplète et la résout en remplissant les cases vides de manière
- * récursive. Le solveur vérifie si chaque placement de nombre est valide en considérant les règles du Sudoku.
- *
- * Auteur : @walidmadad
+ * Auteur : @walidMadad
  * Date : 01/10/2024
  */
-public class SudokuSolver {
+public class SudokuSolver extends JFrame {
 
-    // Taille standard de la grille de Sudoku (9x9)
-    private static final int GRID_SIZE = 9;
+    private static final int GRID_SIZE = 9; // Taille de la grille
+    private JTextField[][] fields = new JTextField[GRID_SIZE][GRID_SIZE]; // Grille de champs de texte
+    private int[][] board = new int[GRID_SIZE][GRID_SIZE]; // Grille initialisée à vide
 
     /**
-     * Point d'entrée principal du programme. Il initialise la grille de Sudoku et appelle
-     * la fonction de résolution.
+     * Constructeur de SudokuSolver pour initialiser l'interface graphique.
+     */
+    public SudokuSolver() {
+        setTitle("Sudoku Solver");  // Titre de la fenêtre
+        setSize(600, 600);  // Taille de la fenêtre
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);  // Action lors de la fermeture
+        setLayout(new BorderLayout());  // Utilisation d'un layout BorderLayout
+
+        // Panneau principal pour la grille de Sudoku
+        JPanel panel = new JPanel();
+        panel.setLayout(new GridLayout(3, 3, 5, 5)); // Espacement entre les boxes
+
+        // Initialisation des champs de texte de la grille
+        for (int boxRow = 0; boxRow < 3; boxRow++) {
+            for (int boxCol = 0; boxCol < 3; boxCol++) {
+                JPanel boxPanel = new JPanel();
+                boxPanel.setLayout(new GridLayout(3, 3)); // Chaque box a un GridLayout 3x3
+
+                for (int row = 0; row < 3; row++) {
+                    for (int col = 0; col < 3; col++) {
+                        int globalRow = boxRow * 3 + row;
+                        int globalCol = boxCol * 3 + col;
+
+                        fields[globalRow][globalCol] = new JTextField();
+                        fields[globalRow][globalCol].setFont(new Font("Monospaced", Font.BOLD, 24));
+                        fields[globalRow][globalCol].setHorizontalAlignment(JTextField.CENTER);
+                        fields[globalRow][globalCol].setBorder(new LineBorder(Color.BLACK, 1));
+
+                        boxPanel.add(fields[globalRow][globalCol]); // Ajout de chaque champ au panel de box
+                    }
+                }
+                panel.add(boxPanel); // Ajout de la box au panneau principal
+            }
+        }
+
+        // Bouton pour résoudre le Sudoku
+        JButton solveButton = new JButton("Résoudre le Sudoku");
+        solveButton.setBackground(Color.LIGHT_GRAY);  // Couleur de fond
+        solveButton.setForeground(Color.BLACK);  // Couleur du texte
+
+        // Modification de la taille et du style de police du texte
+        solveButton.setFont(new Font("Monospaced", Font.BOLD, 18));
+
+        // Ajout d'une infobulle pour expliquer la fonction du bouton
+        solveButton.setToolTipText("Cliquez ici pour résoudre le Sudoku.");
+
+        solveButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (readBoardFromUser()) {
+                    if (solveBoard(board)) {
+                        updateBoard();
+                        JOptionPane.showMessageDialog(null, "Sudoku résolu !");
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Pas de solution.");
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(null, "Veuillez entrer des nombres valides (0 à 9).");
+                }
+            }
+        });
+
+        // Ajout du panneau de grille et du bouton à l'interface
+        add(panel, BorderLayout.CENTER);
+        add(solveButton, BorderLayout.SOUTH);
+
+        setVisible(true);  // Rendre la fenêtre visible
+    }
+
+    /**
+     * Méthode pour lire la grille de Sudoku entrée par l'utilisateur.
      *
-     * @param args Les arguments de ligne de commande (non utilisés).
+     * @return true si l'entrée est valide, false sinon
+     */
+    private boolean readBoardFromUser() {
+        for (int row = 0; row < GRID_SIZE; row++) {
+            for (int col = 0; col < GRID_SIZE; col++) {
+                String text = fields[row][col].getText();
+                if (text.isEmpty()) {
+                    board[row][col] = 0; // Les cases vides sont considérées comme 0
+                } else {
+                    try {
+                        int value = Integer.parseInt(text);
+                        if (value < 0 || value > 9) {
+                            return false; // Nombre invalide
+                        }
+                        board[row][col] = value;
+                    } catch (NumberFormatException e) {
+                        return false; // Entrée non valide
+                    }
+                }
+            }
+        }
+        return true; // Si toutes les entrées sont valides
+    }
+
+    /**
+     * Met à jour l'interface graphique avec les nouvelles valeurs de la grille après résolution.
+     */
+    private void updateBoard() {
+        for (int row = 0; row < GRID_SIZE; row++) {
+            for (int col = 0; col < GRID_SIZE; col++) {
+                fields[row][col].setText(String.valueOf(board[row][col]));
+            }
+        }
+    }
+
+    /**
+     * Méthode principale pour démarrer l'application.
      */
     public static void main(String[] args) {
-        // Définition d'une grille de Sudoku incomplète
-        int[][] board = {
-                {0, 2, 0, 6, 0, 8, 0, 0, 0},
-                {5, 8, 0, 0, 0, 9, 7, 0, 0},
-                {0, 0, 0, 0, 4, 0, 0, 0, 0},
-                {3, 7, 0, 0, 0, 0, 5, 0, 0},
-                {6, 0, 0, 0, 0, 0, 0, 0, 4},
-                {0, 0, 8, 0, 0, 0, 0, 1, 3},
-                {0, 0, 0, 0, 2, 0, 0, 0, 0},
-                {0, 0, 9, 8, 0, 0, 0, 3, 6},
-                {0, 0, 0, 3, 0, 6, 0, 9, 0}
-        };
-
-        // Appel de la fonction pour résoudre le Sudoku
-        if (solveBoard(board)) {
-            // Si la solution est trouvée, afficher la grille
-            printBoard(board);
-        } else {
-            // Si aucune solution n'existe, afficher un message d'erreur
-            System.out.println("No solution exists.");
-        }
+        new SudokuSolver();  // Crée l'interface graphique
     }
 
-    /**
-     * Affiche la grille de Sudoku.
-     *
-     * @param board La grille de Sudoku à afficher (tableau 2D de 9x9).
-     */
-    private static void printBoard(int[][] board) {
-        for (int row = 0; row < GRID_SIZE; row++) {
-            for (int column = 0; column < GRID_SIZE; column++) {
-                System.out.print(board[row][column] + " ");  // Affichage de chaque élément avec un espace
-            }
-            System.out.println();  // Nouvelle ligne après chaque rangée
-        }
-    }
+    // ------------------------------------- Méthodes du Solveur -------------------------------------
 
-    /**
-     * Vérifie si un nombre existe déjà dans une rangée spécifique de la grille.
-     *
-     * @param board La grille de Sudoku (tableau 2D de 9x9).
-     * @param number Le nombre à vérifier.
-     * @param row L'indice de la rangée à vérifier.
-     * @return true si le nombre existe dans la rangée, sinon false.
-     */
     private static boolean isNumberInRow(int[][] board, int number, int row) {
         for (int i = 0; i < GRID_SIZE; i++) {
             if (board[row][i] == number) {
-                return true;  // Le nombre existe déjà dans la rangée
+                return true;
             }
         }
-        return false;  // Le nombre n'existe pas dans la rangée
+        return false;
     }
 
-    /**
-     * Vérifie si un nombre existe déjà dans une colonne spécifique de la grille.
-     *
-     * @param board La grille de Sudoku (tableau 2D de 9x9).
-     * @param number Le nombre à vérifier.
-     * @param column L'indice de la colonne à vérifier.
-     * @return true si le nombre existe dans la colonne, sinon false.
-     */
     private static boolean isNumberInColumn(int[][] board, int number, int column) {
         for (int i = 0; i < GRID_SIZE; i++) {
             if (board[i][column] == number) {
-                return true;  // Le nombre existe déjà dans la colonne
+                return true;
             }
         }
-        return false;  // Le nombre n'existe pas dans la colonne
+        return false;
     }
 
-    /**
-     * Vérifie si un nombre existe déjà dans une boîte 3x3 spécifique de la grille.
-     *
-     * @param board La grille de Sudoku (tableau 2D de 9x9).
-     * @param number Le nombre à vérifier.
-     * @param row L'indice de la rangée.
-     * @param column L'indice de la colonne.
-     * @return true si le nombre existe dans la boîte 3x3, sinon false.
-     */
     private static boolean isNumberInBox(int[][] board, int number, int row, int column) {
-        // Calcul des indices de la boîte 3x3
         int localBoxRow = row - row % 3;
         int localBoxColumn = column - column % 3;
 
-        // Parcourt chaque case de la boîte 3x3
         for (int i = localBoxRow; i < localBoxRow + 3; i++) {
             for (int j = localBoxColumn; j < localBoxColumn + 3; j++) {
                 if (board[i][j] == number) {
-                    return true;  // Le nombre existe déjà dans la boîte
+                    return true;
                 }
             }
         }
-        return false;  // Le nombre n'existe pas dans la boîte
+        return false;
     }
 
-    /**
-     * Vérifie si un placement de nombre est valide, c'est-à-dire s'il respecte
-     * les règles du Sudoku dans la rangée, la colonne et la boîte 3x3.
-     *
-     * @param board La grille de Sudoku (tableau 2D de 9x9).
-     * @param number Le nombre à placer.
-     * @param row L'indice de la rangée où placer le nombre.
-     * @param column L'indice de la colonne où placer le nombre.
-     * @return true si le placement est valide, sinon false.
-     */
     private static boolean isValidPlacement(int[][] board, int number, int row, int column) {
         return !isNumberInRow(board, number, row) &&
                 !isNumberInColumn(board, number, column) &&
-                !isNumberInBox(board, number, row, column);  // Renvoie true si le placement est valide
+                !isNumberInBox(board, number, row, column);
     }
 
-    /**
-     * Résout la grille de Sudoku en utilisant la récursion et le backtracking.
-     * Parcourt chaque case de la grille et essaie d'insérer des nombres valides.
-     *
-     * @param board La grille de Sudoku à résoudre (tableau 2D de 9x9).
-     * @return true si la grille est résolue, sinon false.
-     */
     private static boolean solveBoard(int[][] board) {
-        // Parcourt chaque case de la grille
         for (int row = 0; row < GRID_SIZE; row++) {
             for (int column = 0; column < GRID_SIZE; column++) {
-                // Vérifie si la case est vide (contient 0)
                 if (board[row][column] == 0) {
-                    // Essaye d'insérer des nombres de 1 à 9 dans la case vide
                     for (int number = 1; number <= GRID_SIZE; number++) {
                         if (isValidPlacement(board, number, row, column)) {
-                            board[row][column] = number;  // Insère le nombre si le placement est valide
+                            board[row][column] = number;
 
-                            // Appelle récursivement solveBoard pour continuer à résoudre
                             if (solveBoard(board)) {
-                                return true;  // Si la solution est trouvée, retourne true
+                                return true;
                             } else {
-                                board[row][column] = 0;  // Sinon, annule (backtracking) et réinitialise la case
+                                board[row][column] = 0;
                             }
                         }
                     }
-                    return false;  // Retourne false si aucun nombre valide ne peut être placé
+                    return false;
                 }
             }
         }
-        return true;  // Retourne true si la grille est entièrement remplie et résolue
+        return true;
     }
 }
